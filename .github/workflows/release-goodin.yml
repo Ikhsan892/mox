@@ -16,7 +16,7 @@ jobs:
     steps:
       - uses: googleapis/release-please-action@v4
         with:
-          token: ${{ secrets.GITHUB_TOKEN }}
+          token: ${{ secrets.RELEASE_PLEASE_TOKEN }}
           target-branch: main
           release-type: go
           package-name: release
