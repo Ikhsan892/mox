@@ -1,0 +1,83 @@
+@startuml
+
+package Internal {
+  map App {
+    Log =>
+    Config =>
+    Data =>
+    Storage =>
+    Queue =>
+    Cache =>
+  }
+}
+
+package Drivers {
+  object Api
+  object Desktop 
+  object Web 
+}
+
+package UseCase {
+  object Service
+  object Repository
+  object Adapter
+  object Domain
+
+  object Port
+
+  package Controller {
+    package Command {
+      object CommandHandler
+    }
+
+    package Query {
+      object QueryHandler
+    }
+  }
+
+  diamond use_case
+}
+
+package Storage {
+  object S3
+  object FileSystem
+}
+
+package Database {
+  object Postgres
+  object MySQL
+  object Meilisearch
+  object ElasticSearch
+}
+
+
+diamond dia
+
+
+Drivers --> dia
+Port --> dia
+dia --> App
+Query --> use_case
+Command --> use_case
+
+
+App::Data --> Database
+App::Storage --> Storage
+
+use_case --> Domain : Processing
+Domain --> Service
+Service --> Repository
+Port --> Controller
+Repository --> Adapter
+
+
+Controller --> Port
+
+Service --> Controller
+
+
+Adapter .. Database : Implement
+' Object03 *-- Object04
+' Object05 o-- "4" Object06
+' Object07 .. Object08 : some labels
+@enduml

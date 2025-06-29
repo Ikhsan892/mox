@@ -1,0 +1,82 @@
+basePath: /api
+definitions:
+  api.ApiError:
+    properties:
+      code:
+        type: integer
+      message:
+        type: string
+      request_id:
+        type: string
+      time:
+        type: string
+    type: object
+  dto.CreateOrderRequest:
+    properties:
+      address:
+        type: string
+      customer_name:
+        type: string
+      items:
+        items:
+          $ref: '#/definitions/dto.OrderItemRequest'
+        type: array
+      total_amount:
+        type: number
+    type: object
+  dto.OrderItemRequest:
+    properties:
+      price:
+        type: number
+      productId:
+        type: string
+      productName:
+        type: string
+      quantity:
+        type: integer
+    type: object
+info:
+  contact:
+    name: Muhammad Fatihul Ikhsan
+  description: Application Service for Microservices Architecture
+  license:
+    name: Private License
+  title: TiulTemplate Documentation
+  version: "1.0"
+paths:
+  /v1/order:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Order Request
+        in: body
+        name: order
+        required: true
+        schema:
+          $ref: '#/definitions/dto.CreateOrderRequest'
+      produces:
+      - application/json
+      responses:
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/api.ApiError'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/api.ApiError'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/api.ApiError'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/api.ApiError'
+      summary: API untuk Create Order
+      tags:
+      - Menu
+schemes:
+- http
+swagger: "2.0"

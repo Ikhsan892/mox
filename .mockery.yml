@@ -1,0 +1,36 @@
+with-expecter: True
+filename: "mock_{{.InterfaceName}}.go"
+dir: "mocks/{{.PackagePath}}"
+mockname: "Mock{{.InterfaceName}}"
+outpkg: "{{.PackageName}}"
+packages:
+  goodin/pkg/driver:
+    config:
+      all: true
+  goodin/adapters:
+    config:
+      all: true
+  goodin/infrastructure/messaging/nats:
+    config:
+      all: true
+  goodin/use_cases/orders/port/input/message/request:
+    config:
+      all: true
+  goodin/use_cases/orders/port/input/service:
+    config:
+      all: true
+  goodin/use_cases/orders/port/input/message/listener:
+    config:
+      all: true
+  goodin/use_cases/orders/port/output/repository:
+    config:
+      all: true
+  goodin/use_cases/orders/port/output/messaging:
+    config:
+      all: true
+  goodin/pkg/datamanager:
+    config:
+    interfaces:
+      DataAdapter:
+        config:
+          all: True

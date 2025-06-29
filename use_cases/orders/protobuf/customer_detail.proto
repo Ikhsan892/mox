@@ -1,0 +1,17 @@
+
+syntax = "proto3";
+package protobuf;
+
+
+
+option go_package = "/dto";
+
+message CustomerDetailRequest {
+    string customer_name = 1;
+}
+
+
+message CustomerDetailResponse {
+    string customer_name = 1;
+    string customer_id = 2;
+}

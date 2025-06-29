@@ -1,0 +1,25 @@
+syntax = "proto3";
+package protobuf;
+
+import "google/protobuf/timestamp.proto";
+
+
+option go_package = "/dto";
+
+message Order {
+    string order_id = 1;
+    string customer_name = 2;
+    repeated OrderItem items = 3;
+    float total_amount = 4;
+    string address = 5;
+    int64 created_at = 6;
+    int64 updated_at = 7;
+    string status = 8;
+}
+
+message OrderItem {
+    string product_id = 1;
+    string product_name = 2;
+    int32 quantity = 3;
+    float price = 4;
+}
