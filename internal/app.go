@@ -1,13 +1,16 @@
 package core
 
 import (
+	"context"
 	"log/slog"
 
+	"mox/pkg/config"
+	"mox/pkg/datamanager"
+	"mox/pkg/driver"
+	driverv2 "mox/pkg/driver/v2"
+	"mox/pkg/hooks"
+
 	"github.com/golang-migrate/migrate/v4"
-	"goodin/pkg/config"
-	"goodin/pkg/datamanager"
-	"goodin/pkg/driver"
-	"goodin/pkg/hooks"
 )
 
 // this is the base interface for application behaviour and
@@ -21,6 +24,9 @@ type App interface {
 
 	// base logger application
 	Logger() *slog.Logger
+
+	// app global context
+	Context() context.Context
 
 	// database instance for access data a.k.a driver
 	// support multi database and multi vendor ( agnostic )
@@ -39,13 +45,19 @@ type App interface {
 	Bootstrap() error
 
 	// Driver manager
-	Driver() *driver.Driver
+	Driver() *driverv2.Manager
+	DriverV2() *driverv2.Manager
+	DriverV1() *driver.Driver
 
 	// migration database
 	Migration(string) *migrate.Migrate
 
 	// Shutdown Application
 	Shutdown() error
+
+	// Trigger graceful shutdown secara programmatically.
+	// Ini akan membatalkan Context utama.
+	Stop()
 
 	// internal built-in cache
 	// TODO : Implement this feature

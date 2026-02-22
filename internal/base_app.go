@@ -3,39 +3,69 @@ package core
 import (
 	"context"
 	"database/sql"
-	"fmt"
 	"log"
 	"log/slog"
 	"path/filepath"
 	"strings"
 	"sync"
 
+	"mox/adapters"
+	"mox/pkg/config"
+	"mox/pkg/datamanager"
+	"mox/pkg/driver"
+	driverv2 "mox/pkg/driver/v2"
+	"mox/pkg/hooks"
+	"mox/tools/logs"
+
 	"github.com/golang-migrate/migrate/v4"
 	"github.com/golang-migrate/migrate/v4/database/postgres"
 	"github.com/golang-migrate/migrate/v4/source/file"
-	"goodin/adapters"
-	"goodin/pkg/config"
-	"goodin/pkg/datamanager"
-	"goodin/pkg/driver"
-	"goodin/pkg/hooks"
-	"goodin/tools/logs"
+	slogmulti "github.com/samber/slog-multi"
 )
 
 var _ App = (*BaseApp)(nil)
 
 type BaseApp struct {
-	config *config.Config
-	logger *slog.Logger
-	data   *datamanager.DataManager
-	driver *driver.Driver
+	config   *config.Config
+	logger   *slog.Logger
+	data     *datamanager.DataManager
+	driver   *driver.Driver
+	driverv2 *driverv2.Manager
 
-	mu *sync.Mutex
+	mu         *sync.Mutex
+	ctx        context.Context
+	cancelFunc context.CancelFunc
 
 	// hooks
 	onBeforeApplicationBootstrapped *hooks.Hook[BeforeApplicationBootstrapped]
 	onApplicationStop               *hooks.Hook[CloseEvent]
 	onAfterApplicationBootstrapped  *hooks.Hook[AfterApplicationBootstrapped]
 	onAfterServiceExecuted          *hooks.Hook[AfterServiceExecuted]
+}
+
+// Context implements [App].
+func (b *BaseApp) Context() context.Context {
+	b.mu.Lock()
+
+	defer b.mu.Unlock()
+
+	if b.ctx != nil {
+		return b.ctx
+	}
+
+	b.ctx, b.cancelFunc = context.WithCancel(context.Background())
+
+	return b.ctx
+}
+
+// Stop implements [App].
+func (b *BaseApp) Stop() {
+	if b.cancelFunc == nil {
+		// nothing to do
+		return
+	}
+
+	b.cancelFunc()
 }
 
 func NewBaseApp() *BaseApp {
@@ -98,10 +128,16 @@ func (b *BaseApp) initLogger(cfg *config.Config) *slog.Logger {
 		},
 	})
 
-	return slog.New(handler)
+	slog.SetDefault(slog.New(
+		slogmulti.Fanout(
+			// slog.NewJSONHandler(os.Stdout, nil),
+			handler,
+		)))
+
+	return slog.Default()
 }
 
-func (b *BaseApp) Driver() *driver.Driver {
+func (b *BaseApp) DriverV1() *driver.Driver {
 	if b.driver != nil {
 		return b.driver
 	}
@@ -113,8 +149,29 @@ func (b *BaseApp) Driver() *driver.Driver {
 	return b.driver
 }
 
+func (b *BaseApp) Driver() *driverv2.Manager {
+	return b.DriverV2()
+}
+
+func (b *BaseApp) DriverV2() *driverv2.Manager {
+	if b.driverv2 != nil {
+		return b.driverv2
+	}
+
+	b.mu.Lock()
+	b.driverv2 = driverv2.NewManagerV2()
+	b.mu.Unlock()
+
+	return b.driverv2
+}
+
 func (b *BaseApp) Shutdown() error {
 	if err := b.OnApplicationStop().Add("close_connection_db", func(e CloseEvent) error {
+		if e.App.Data() == nil {
+			e.App.Logger().Warn("skip closing driver")
+			return nil
+		}
+
 		e.App.Data().Close("sql", func(err error) {
 			e.App.Logger().Error(err.Error())
 		})
@@ -233,32 +290,38 @@ func (b *BaseApp) getFileName(filePath string) string {
 	return strings.TrimSuffix(base, filepath.Ext(base)) // Remove the extension
 }
 
+func (b *BaseApp) loadConfig(configPath string) *config.Config {
+	var cfg *config.Config
+	if configPath == "" {
+		cfg = config.NewDefaultConfig()
+	} else {
+		cfg = config.NewConfig(config.ConfigParam{
+			ConfigName: b.getFileName(configPath),
+			ConfigType: "toml",
+			Path:       b.getDirectoryPath(configPath),
+		})
+	}
+
+	return cfg
+}
+
 // Start The Application by blocking the main
 func (b *BaseApp) Bootstrap() error {
 	b.OnBeforeApplicationBootstrapped().Execute(BeforeApplicationBootstrapped{App: b})
 
-	b.OnAfterApplicationBootstrapped().Add("a_bootstrap", func(e AfterApplicationBootstrapped) error {
-		var cfg *config.Config
-		if e.ConfigPath == "" {
-			cfg = config.NewDefaultConfig()
-		} else {
-			cfg = config.NewConfig(config.ConfigParam{
-				ConfigName: b.getFileName(e.ConfigPath),
-				ConfigType: "toml",
-				Path:       b.getDirectoryPath(e.ConfigPath),
-			})
-		}
-
+	b.OnAfterApplicationBootstrapped().Add("a_load_cfg", func(e AfterApplicationBootstrapped) error {
+		cfg := b.loadConfig(e.ConfigPath)
 		b.config = cfg
 		b.logger = b.initLogger(cfg)
 
-		// after logger initiate
-		if e.ConfigPath == "" {
-			e.App.Logger().Info("Load default config.toml")
-		} else {
-			e.App.Logger().Info(fmt.Sprintf("Load file config %s", b.getFileName(e.ConfigPath)))
-		}
+		return nil
+	})
 
+	b.OnAfterApplicationBootstrapped().Add("b_bootstrap", func(e AfterApplicationBootstrapped) error {
+		cfg := b.loadConfig(e.ConfigPath)
+
+		b.config = cfg
+		b.logger = b.initLogger(cfg)
 		e.App.Logger().Info("Bootstrapping Application...")
 
 		b.data = b.initDatasource()

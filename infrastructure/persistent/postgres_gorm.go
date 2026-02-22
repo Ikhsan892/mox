@@ -3,7 +3,7 @@ package persistent
 import (
 	"database/sql"
 
-	"goodin/pkg/config"
+	"mox/pkg/config"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 	"gorm.io/plugin/opentelemetry/tracing"

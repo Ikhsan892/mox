@@ -3,7 +3,7 @@ package stack_test
 import (
 	"testing"
 
-	"goodin/tools/stack"
+	"mox/tools/stack"
 	"github.com/stretchr/testify/assert"
 )
 

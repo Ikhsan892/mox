@@ -5,8 +5,8 @@ import (
 	"errors"
 	"testing"
 
-	adapter_mock "goodin/mocks/goodin/adapters"
-	"goodin/pkg/config"
+	adapter_mock "mox/mocks/goodin/adapters"
+	"mox/pkg/config"
 	"github.com/stretchr/testify/assert"
 )
 

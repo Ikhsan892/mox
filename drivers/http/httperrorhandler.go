@@ -5,11 +5,11 @@ import (
 	"log"
 	"net/http"
 
-	"goodin/drivers/http/api"
+	"mox/drivers/http/api"
 
 	"github.com/labstack/echo/v4"
 
-	core "goodin/internal"
+	core "mox/internal"
 )
 
 func GetRequestId(c echo.Context) string {

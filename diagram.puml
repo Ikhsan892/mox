@@ -1,0 +1,303 @@
+    @startuml
+
+    !theme plain
+    hide empty members
+    skinparam linetype ortho
+    skinparam nodesep 60
+    skinparam ranksep 60
+
+    title "Mox System Architecture: Full Blueprint (Refactored)"
+
+    ' ==========================================
+    ' 1. SHARED DOMAIN (Bahasa Bersama)
+    ' ==========================================
+    package "Shared Object" {
+        enum MsgType {
+            CMD_DRAIN
+            CMD_SHUTDOWN
+            CONFIG_RELOAD
+            EVENT_STATS
+            RESP_OK 
+            RESP_ERROR 
+        }
+
+        enum WorkerState {
+            Disconnected = 0 
+            Connected = 1
+            Connecting = 2
+            Starting = 3
+            Error = 4
+            Retrying = 5
+            Idle = 6
+        }
+
+        class MoxMessage {
+            + ID: string
+            + Type: MsgType        
+            + FromPID: int        
+            + Payload: []byte
+            + Timestamp: int64
+        }
+    }
+
+    ' ==========================================
+    ' 2. CORE INTERFACES (Kontrak / Abstraksi)
+    ' ==========================================
+    package "Core Interfaces" {
+
+        ' --- Master Side Contracts ---
+        interface "WorkerRegistrar" as WorkerRegistrar {
+            + Add(worker: WorkerProcess)
+        }
+
+        interface "WorkerProvider" as IProvider {
+            + Get(pid: int): WorkerProcess
+            + GetAll(): []WorkerProcess
+            + Total(): int
+        }
+
+        interface "WorkerProcess" as IWorkerProcess {
+            + PID(): int
+            + State(): WorkerState
+            + IsAlive(): bool
+            + Start() error
+            + ReloadConfig() error
+            + Drain() error
+            + Shutdown() error
+            + SendMessage(msg: MoxMessage) error
+        }
+
+        ' -- Global Messaging Interface ---
+        interface "Messaging" as IMessaging {
+            + Send(ctx, msg MoxMessage, worker IWorkerProcess)
+            + Broadcast(ctx, msg MoxMessage)
+        }
+
+        interface "IRegistrar" as IRegistrar {
+            + Remove(pid int)
+        }
+
+        ' --- Worker Side Contracts ---
+        interface "UserApplication" as IUserApp {
+            + Serve(listener: net.Listener)
+            + Shutdown(ctx)
+        }
+    }
+
+    ' ==========================================
+    ' 3. MASTER PROCESS (Server Side)
+    ' ==========================================
+    package "Master Domain" {
+
+        ' --- Infrastructure Layer ---
+        package "Infra" {
+            class "WorkerConnectionRegistry" as Registry {
+                - workers: map[int]WorkerProcess
+                - mu: sync.RWMutex
+
+                -- State Management Logic --
+                + StartCleanupLoop()
+
+                -- Implements --
+                + Add(w WorkerProcess) error
+                + Remove(pid int)
+                + Get(pid) int
+                + Total() int
+                + GetAll() []WorkerProcess
+            }
+
+            class "IPCServerGateway" as Server {
+                - socketPath: string
+                - port: int
+                - registrar: IRegistrar
+                - bus: IMessaging
+
+                -- Logic --
+                + ListenAndServe()
+                - handleHandshake(conn) WorkerProcess
+                - sendFD(conn, fd)
+                - handleIncomingMsg(msg MoxMessage)
+            }
+
+            class "EventBus" as Bus {
+                + Send(ctx, msg MoxMessage, worker IWorkerProcess)
+                + Broadcast(ctx, msg MoxMessage)
+            }
+        }
+
+        ' --- Domain Layer --- 
+        package "Domain" {
+            class "Orchestrator" as Brain {
+                - bus: IMessaging
+                - provider: IProvider
+
+                -- Logic --
+                + StartLoop()
+                + CheckHealth() string
+                + ScaleUp()
+                + ScaleDown()
+            }
+
+            class "WorkerClient" as WorkerClient {
+                ' Merged: Representasi Worker di mata Master
+                - pid: int 
+                - state: WorkerState 
+                - conn: *net.UnixConn
+                - lastSeen: time.Time
+                
+                -- Implements / Logic --
+                + PID() int 
+                + State() WorkerState
+                + IsAlive() bool
+                + Start() error
+                + Drain() error 
+                + ReloadConfig() error
+                + Shutdown() error
+                + SendMessage(msg: MoxMessage) error
+                + readLoop() 
+            }
+            
+        }
+
+
+
+        ' --- Composition Root ---
+        class "Master" as App {
+            - registry: *ConnectionRegistry
+            - server: *IPCServerGateway
+            - operation: *MasterConsoleOperation
+            - bus: *EventBus
+            - orchestrator: *Orchestrator
+            - ctx: context.Context
+
+            + NewMaster()
+            + Run()
+            + Stop()
+        }
+    }
+
+    package "Operation Control" {
+
+        interface IControl {
+            + Execute(ctx context.Context, cmd Command) (string,error)
+        }
+
+        class Command {
+            + type: MsgType
+            + payload: []byte
+        }
+
+        interface "MasterConsoleOperationHandler" as MasterConsoleOp {
+            + func(ctx context.Context, master *App, cmd Command) error
+        }
+
+        interface "MasterConsoleOperationHandler" as WorkerConsoleOp {
+            + func(ctx context.Context, worker *Worker, cmd Command) error
+        }
+
+        ' -- Master Command --
+        class "MasterConsoleOperation" as MasterCommand {
+            + registries: map[MsgType]MasterConsoleOp
+            + mu: *sync.RWMutex
+
+            -- Logic -- 
+            Register(bus MasterConsoleOp)
+            Execute(ctx context.Context, cmd Command) error
+        }
+
+        ' -- Master Command --
+        class "WorkerConsoleOperation" as WorkerCommand {
+            + registries: map[MsgType]WorkerConsoleOp
+            + Payload: []byte
+
+            -- Logic -- 
+            Register(bus WorkerConsoleOp)
+            Execute(ctx context.Context, cmd Command) error
+        }
+    }
+        
+
+    ' ==========================================
+    ' 4. WORKER PROCESS (Client Side)
+    ' ==========================================
+    package "Worker Process" {
+
+        class "IPCClient" as Client {
+            - conn: *net.UnixConn
+            - socketPath: string
+
+            + Connect()
+            + ReceiveFD(): int
+            + Send(msg: MoxMessage)
+            + ListenLoop()
+        }
+
+        class "MoxAgent" as Agent {
+            - app: IUserApp
+            - client: *IPCClient
+            - pid: int
+
+            + Start()
+            + Register()
+            - heartbeatLoop()
+        }
+
+        class "BusinessLogic" as UserCode {
+            + Serve(ln)
+            + Shutdown(ctx)
+        }
+    }
+
+    ' ==========================================
+    ' 5. RELATIONS (Wiring)
+    ' ==========================================
+
+    ' --- Interface Inheritance (Generalization) ---
+    WorkerRegistrar ..|> IRegistrar : extends
+
+    ' --- Interface Implementation (Realization) ---
+    Registry ..|> WorkerRegistrar : implements
+    Registry ..|> IProvider : implements
+    WorkerClient ..|> IWorkerProcess : implements
+    UserCode ..|> IUserApp : implements
+    Bus ..|> IMessaging : implements
+
+
+    ' --- Master Composition (Ownership) ---
+    App *-- Registry
+    App *-- Server
+    App *-- Bus
+    App *-- Brain
+
+    ' --- Dependency Injection (Usage) ---
+    Bus ..> IProvider : reads from
+    Brain ..> IMessaging : commands
+    Brain ..> IProvider : monitors
+    Server ..> IMessaging : routes incoming events
+
+    ' --- Worker Composition ---
+    Agent *-- Client
+    Agent o-- IUserApp : wraps
+
+    ' --- Network Communication (The Bridge) ---
+    Server <..> Client : Unix Domain Socket\n(JSON + SCM_RIGHTS)
+
+    ' -- Operation Control Wiring ---
+    MasterCommand ..> MasterConsoleOp : dispatches to
+    WorkerCommand ..> WorkerConsoleOp : dispatches to
+    MasterCommand ..|> IControl : implements
+    WorkerCommand ..|> IControl : implements
+    MasterCommand ..> App : operates on
+    Command ..> MsgType : has a field of
+
+    MasterConsoleOp ..|> Command : use payload
+    WorkerConsoleOp ..|> Command : use payload
+
+    ' --- Protocol Dependency ---
+    Server ..> MoxMessage : uses
+    Client ..> MoxMessage : uses
+    Bus ..> MoxMessage : wraps
+
+    MoxMessage ..> MsgType : has a field of
+
+    @enduml

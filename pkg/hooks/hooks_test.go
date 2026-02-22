@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"testing"
 
-	"goodin/pkg/hooks"
+	"mox/pkg/hooks"
 	"github.com/stretchr/testify/assert"
 )
 

@@ -6,10 +6,10 @@ import (
 	"fmt"
 	"log/slog"
 
-	nats_infra "goodin/infrastructure/messaging/nats"
-	core "goodin/internal"
-	"goodin/use_cases/orders/dto"
-	"goodin/use_cases/orders/port/output/messaging"
+	nats_infra "mox/infrastructure/messaging/nats"
+	core "mox/internal"
+	"mox/use_cases/orders/dto"
+	"mox/use_cases/orders/port/output/messaging"
 	"google.golang.org/protobuf/proto"
 )
 

@@ -1,8 +1,8 @@
 package adapters
 
 import (
-	"goodin/infrastructure/persistent"
-	"goodin/pkg/config"
+	"mox/infrastructure/persistent"
+	"mox/pkg/config"
 )
 
 type Adapter interface {
@@ -15,4 +15,6 @@ var RegisteredSQLAdapters []Adapter = []Adapter{
 	&persistent.Postgres{},
 	&persistent.MySQL{},
 	&persistent.PostgresGorm{},
+	&persistent.SQLite{},
+	&persistent.SQLiteGorm{},
 }

@@ -3,13 +3,13 @@ package orders
 import (
 	"context"
 	"errors"
-	"goodin/mocks/goodin/use_cases/orders/port/input/message/request"
-	"goodin/mocks/goodin/use_cases/orders/port/output/messaging"
-	"goodin/mocks/goodin/use_cases/orders/port/output/repository"
-	"goodin/use_cases/orders/dto"
+	"mox/mocks/goodin/use_cases/orders/port/input/message/request"
+	"mox/mocks/goodin/use_cases/orders/port/output/messaging"
+	"mox/mocks/goodin/use_cases/orders/port/output/repository"
+	"mox/use_cases/orders/dto"
 	"testing"
 
-	core "goodin/internal"
+	core "mox/internal"
 
 	"github.com/stretchr/testify/assert"
 )

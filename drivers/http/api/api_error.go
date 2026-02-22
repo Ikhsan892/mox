@@ -7,7 +7,7 @@ import (
 	"strings"
 	"time"
 
-	"goodin/exceptions"
+	"mox/exceptions"
 )
 
 // ApiError defines the struct for a basic api error response.

@@ -3,7 +3,7 @@ package seeders
 import (
 	"log/slog"
 
-	core "goodin/internal"
+	core "mox/internal"
 )
 
 type SeederAction interface {

@@ -1,7 +1,7 @@
 package persistent
 
 import (
-	"goodin/pkg/config"
+	"mox/pkg/config"
 	"github.com/meilisearch/meilisearch-go"
 )
 

@@ -3,7 +3,7 @@ package adapters
 import (
 	"fmt"
 
-	"goodin/pkg/config"
+	"mox/pkg/config"
 )
 
 type SqlAdapters struct {

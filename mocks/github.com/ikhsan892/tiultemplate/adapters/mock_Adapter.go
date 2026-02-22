@@ -3,7 +3,7 @@
 package adapters
 
 import (
-	config "goodin/pkg/config"
+	config "mox/pkg/config"
 	mock "github.com/stretchr/testify/mock"
 )
 

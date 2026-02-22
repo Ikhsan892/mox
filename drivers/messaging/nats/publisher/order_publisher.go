@@ -3,8 +3,8 @@ package publisher
 import (
 	"context"
 
-	nats_infra "goodin/infrastructure/messaging/nats"
-	core "goodin/internal"
+	nats_infra "mox/infrastructure/messaging/nats"
+	core "mox/internal"
 	"github.com/nats-io/nats.go/jetstream"
 )
 

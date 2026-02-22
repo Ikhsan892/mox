@@ -48,9 +48,24 @@ type Database struct {
 	Port         int    `json:"port" mapstructure:"port"`
 	Username     string `json:"username" mapstructure:"username"`
 	Password     string `json:"password" mapstructure:"password"`
+	Path         string `json:"path" mapstructure:"path"`
+}
+
+// isSQLite returns true if the adapter is a SQLite variant.
+func (config Database) isSQLite() bool {
+	return config.Adapter == "sqlite" || config.Adapter == "sqlite-gorm"
 }
 
 func (config Database) Validate() error {
+	// SQLite only needs adapter, alias, and path/database_name — no network fields.
+	if config.isSQLite() {
+		return validation.ValidateStruct(
+			&config,
+			validation.Field(&config.Adapter, validation.Required),
+			validation.Field(&config.Alias, validation.Required),
+		)
+	}
+
 	return validation.ValidateStruct(
 		&config,
 		validation.Field(&config.Adapter, validation.Required),

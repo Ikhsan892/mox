@@ -3,9 +3,9 @@ package repositories
 import (
 	"context"
 
-	"goodin/gorm/models"
-	"goodin/use_cases/orders/dto"
-	"goodin/use_cases/orders/port/output/repository"
+	"mox/gorm/models"
+	"mox/use_cases/orders/dto"
+	"mox/use_cases/orders/port/output/repository"
 	"gorm.io/gorm"
 )
 

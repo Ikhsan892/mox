@@ -3,8 +3,8 @@ package datamanager_test
 import (
 	"testing"
 
-	datamanager_mock "goodin/mocks/goodin/pkg/datamanager"
-	"goodin/pkg/datamanager"
+	datamanager_mock "mox/mocks/goodin/pkg/datamanager"
+	"mox/pkg/datamanager"
 	"github.com/stretchr/testify/assert"
 	mock_obj "github.com/stretchr/testify/mock"
 )

@@ -1,83 +1,208 @@
 @startuml
 
-package Internal {
-  map App {
-    Log =>
-    Config =>
-    Data =>
-    Storage =>
-    Queue =>
-    Cache =>
-  }
-}
+!theme plain
+hide empty members
+skinparam linetype ortho
+skinparam nodesep 60
+skinparam ranksep 60
 
-package Drivers {
-  object Api
-  object Desktop 
-  object Web 
-}
+title "Mox System Architecture: Full Blueprint"
 
-package UseCase {
-  object Service
-  object Repository
-  object Adapter
-  object Domain
-
-  object Port
-
-  package Controller {
-    package Command {
-      object CommandHandler
+' ==========================================
+' 1. SHARED DOMAIN (Bahasa Bersama)
+' ==========================================
+package "pkg/moxproto (Shared)" {
+    enum MsgType {
+        HANDSHAKE
+        FD_TRANSFER
+        HEARTBEAT
+        SHUTDOWN
+        ACK
     }
 
-    package Query {
-      object QueryHandler
+    class MoxMessage {
+        + ID: string
+        + Type: MsgType
+        + FromPID: int
+        + Payload: json.RawMessage
+        + Timestamp: int64
     }
-  }
-
-  diamond use_case
 }
 
-package Storage {
-  object S3
-  object FileSystem
+' ==========================================
+' 2. CORE INTERFACES (Kontrak / Abstraksi)
+' ==========================================
+package "Core Interfaces" {
+
+    ' --- Master Side Contracts ---
+    interface "WorkerRegistrar" as IRegistrar {
+        + Add(worker: Worker)
+        + Remove(pid: int)
+    }
+
+    interface "WorkerProvider" as IProvider {
+        + Get(pid: int): Worker
+        + GetAll(): []Worker
+        + Total(): int
+    }
+
+    interface "Messaging" as IMessaging {
+        + Send(ctx, pid, msg)
+        + Broadcast(ctx, topic, msg)
+        + Request(ctx, pid, topic, msg): Response
+    }
+
+    ' --- Worker Side Contracts ---
+    interface "UserApplication" as IUserApp {
+        + Serve(listener: net.Listener)
+        + Shutdown(ctx)
+    }
 }
 
-package Database {
-  object Postgres
-  object MySQL
-  object Meilisearch
-  object ElasticSearch
+' ==========================================
+' 3. MASTER PROCESS (Server Side)
+' ==========================================
+package "Master Process" {
+
+    ' --- Infrastructure Layer ---
+    package "Infra" {
+        class "ConnectionRegistry" as Registry {
+            - workers: map[int]*Worker
+            - mu: sync.RWMutex
+
+            -- Implements --
+            + Add(w)
+            + Remove(pid)
+            + Get(pid)
+            + StartCleanupLoop()
+        }
+
+        class "IPCServer" as Server {
+            - socketPath: string
+            - registrar: IRegistrar
+
+            -- Logic --
+            + ListenAndServe()
+            - handleHandshake(conn)
+            - sendFD(conn, fd)
+        }
+
+        class "EventBus" as Bus {
+            - provider: IProvider
+
+            -- Logic --
+            + Send(pid, msg)
+            + Broadcast(msg)
+        }
+    }
+
+    ' --- Domain Layer ---
+    package "Domain" {
+        class "Orchestrator" as Brain {
+            - bus: IMessaging
+            - provider: IProvider
+
+            -- Logic --
+            + StartLoop()
+            + CheckHealth()
+            + ScaleUp()
+            + ScaleDown()
+        }
+    }
+
+    ' --- Composition Root ---
+    class "Master" as App {
+        ' Master Holds Everything
+        - registry: *ConnectionRegistry
+        - server: *IPCServer
+        - bus: *EventBus
+        - orchestrator: *Orchestrator
+        - ctx: context.Context
+
+        + NewMaster()
+        + Run()
+        + Stop()
+    }
 }
 
+' ==========================================
+' 4. WORKER PROCESS (Client Side)
+' ==========================================
+package "Worker Process" {
 
-diamond dia
+    class "IPCClient" as Client {
+        - conn: *net.UnixConn
+        - socketPath: string
+
+        + Connect()
+        + ReceiveFD(): int
+        + Send(msg: MoxMessage)
+        + ListenLoop()
+    }
+
+    class "MoxAgent" as Agent {
+        - app: IUserApp
+        - client: *IPCClient
+        - pid: int
+
+        + Start()
+        + Register()
+        - heartbeatLoop()
+    }
+
+    class "BusinessLogic" as UserCode {
+        + Serve(ln)
+    }
 
 
-Drivers --> dia
-Port --> dia
-dia --> App
-Query --> use_case
-Command --> use_case
+' --- THE MISSING PIECE ADDED HERE ---
+        class "Worker" as WorkerEntity {
+            ' Ini representasi Worker di mata Master
+            - pid: int
+            - state: WorkerState
+            - conn: *net.UnixConn
+            - lastSeen: time.Time
 
+            -- Logic --
+            + Write(msg: MoxMessage): error
+            + Read(): (MoxMessage, error)
+            + Close()
+            + IsAlive(): bool
+        }
+}
 
-App::Data --> Database
-App::Storage --> Storage
+' ==========================================
+' 5. RELATIONS (Wiring)
+' ==========================================
 
-use_case --> Domain : Processing
-Domain --> Service
-Service --> Repository
-Port --> Controller
-Repository --> Adapter
+' --- Interface Implementation (Realization) ---
+Registry ..|> IRegistrar
+Registry ..|> IProvider
+Bus      ..|> IMessaging
+UserCode ..|> IUserApp
 
+' --- Master Composition (Ownership) ---
+App *-- Registry
+App *-- Server
+App *-- Bus
+App *-- Brain
 
-Controller --> Port
+' --- Dependency Injection (Usage) ---
+Server ..> IRegistrar : writes to
+Bus    ..> IProvider  : reads from
+Brain  ..> IMessaging : commands
+Brain  ..> IProvider  : monitors
 
-Service --> Controller
+' --- Worker Composition ---
+Agent *-- Client
+Agent o-- IUserCode
 
+' --- Network Communication (The Bridge) ---
+Server <..> Client : Unix Domain Socket\n(JSON + SCM_RIGHTS)
 
-Adapter .. Database : Implement
-' Object03 *-- Object04
-' Object05 o-- "4" Object06
-' Object07 .. Object08 : some labels
+' --- Protocol Dependency ---
+Server ..> MoxMessage : uses
+Client ..> MoxMessage : uses
+Bus    ..> MoxMessage : wraps
+
 @enduml

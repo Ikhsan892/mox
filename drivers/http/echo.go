@@ -3,20 +3,20 @@ package http
 import (
 	"fmt"
 	"log/slog"
+	"net/http"
 	"os"
 
-	"goodin/drivers/http/api"
-	core "goodin/internal"
-	"goodin/pkg/driver"
+	"mox/drivers/http/api"
+	core "mox/internal"
+	"mox/pkg/driver"
+
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
-
-	"net/http"
-
-	"github.com/fatih/color"
 	echoSwagger "github.com/swaggo/echo-swagger"
 
-	_ "goodin/docs"
+	"github.com/fatih/color"
+
+	_ "mox/docs"
 )
 
 var _ (driver.IDriver) = (*EchoWebAdapter)(nil)
@@ -84,10 +84,9 @@ func NewEcho(app core.App) *EchoWebAdapter {
 			return nil
 		},
 	}))
-
 	e.HTTPErrorHandler = HttpErrorHandler(app)
 	e.Use(middleware.RequestID())
-	e.Use(middleware.Gzip())
+	// e.Use(middleware.Gzip())
 	e.Use(middleware.Recover())
 	e.Use(middleware.CORSWithConfig(middleware.CORSConfig{
 		AllowOrigins:  []string{"*"},
@@ -113,11 +112,11 @@ func (e *EchoWebAdapter) Name() string {
 }
 
 func (e *EchoWebAdapter) Close() error {
+	e.app.Logger().Info("echo web adapter closed")
 	return e.ec.Close()
 }
 
 func (e *EchoWebAdapter) Init() error {
-
 	// s := http.Server{
 	// 	Addr:    fmt.Sprintf(":%d", e.app.Config().App.WebServerPort),
 	// 	Handler: e.ec, // set Echo as handler

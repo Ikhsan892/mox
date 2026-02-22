@@ -1,0 +1,51 @@
+services:
+  backend-v1:
+    image: hashicorp/http-echo:latest
+    command: ["-text=v1 (weight 60)", "-listen=:5678"]
+
+  backend-v2:
+    image: hashicorp/http-echo:latest
+    command: ["-text=v2 (weight 30)", "-listen=:5678"]
+
+  backend-v3:
+    image: hashicorp/http-echo:latest
+    command: ["-text=v3 (weight 10)", "-listen=:5678"]
+
+  haproxy-1:
+    image: haproxy:3.2
+    user: root
+    hostname: haproxy-1
+    environment:
+      - HOSTNAME=haproxy-1
+    volumes:
+      - ./haproxy.cfg:/usr/local/etc/haproxy/haproxy.cfg:ro
+      - socket_vol:/var/lib/haproxy/sockets/
+    ports:
+      - "80:80"
+      - "81:81"
+      - "8404:8404"
+    command: ["haproxy", "-f", "/usr/local/etc/haproxy/haproxy.cfg"]
+    depends_on:
+      - backend-v1
+      - backend-v2
+      - backend-v3
+    restart: unless-stopped
+
+  haproxy-2:
+    image: haproxy:3.2
+    user: root
+    # hostname conflict with network_mode
+    environment:
+      - HOSTNAME=haproxy-2
+    volumes:
+      - ./haproxy.cfg:/usr/local/etc/haproxy/haproxy.cfg:ro
+      - socket_vol:/var/lib/haproxy/sockets/
+    network_mode: "service:haproxy-1"
+    command: ["haproxy", "-f", "/usr/local/etc/haproxy/haproxy.cfg"]
+    depends_on:
+      haproxy-1:
+        condition: service_started
+    restart: unless-stopped
+
+volumes:
+  socket_vol:

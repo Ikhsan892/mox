@@ -4,9 +4,9 @@ import (
 	"log/slog"
 	"os"
 
-	nats_messaging "goodin/drivers/messaging/nats"
-	"goodin/drivers/monitoring"
-	core "goodin/internal"
+	nats_messaging "mox/drivers/messaging/nats"
+	"mox/drivers/monitoring"
+	core "mox/internal"
 	"github.com/spf13/cobra"
 )
 

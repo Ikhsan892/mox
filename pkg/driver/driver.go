@@ -36,7 +36,6 @@ func (d *Driver) Instance(name string) interface{} {
 	}
 
 	return nil
-
 }
 
 func (d *Driver) RunDriver(driver IDriver) error {

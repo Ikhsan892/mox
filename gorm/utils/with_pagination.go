@@ -1,7 +1,7 @@
 package gorm_utls
 
 import (
-	"goodin/gorm/models"
+	"mox/gorm/models"
 
 	"gorm.io/gorm"
 )

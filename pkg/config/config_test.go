@@ -3,7 +3,7 @@ package config_test
 import (
 	"testing"
 
-	config "goodin/pkg/config"
+	config "mox/pkg/config"
 	"github.com/stretchr/testify/assert"
 )
 

@@ -1,9 +1,9 @@
 package nats_messaging
 
 import (
-	nats_infra "goodin/infrastructure/messaging/nats"
-	core "goodin/internal"
-	"goodin/pkg/driver"
+	nats_infra "mox/infrastructure/messaging/nats"
+	core "mox/internal"
+	"mox/pkg/driver"
 )
 
 var _ (driver.IDriver) = (*NatsMesssaging)(nil)

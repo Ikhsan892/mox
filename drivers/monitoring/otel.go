@@ -5,18 +5,18 @@ import (
 	"errors"
 	"strconv"
 	"sync"
-	"time"
 
-	"goodin/pkg/driver"
+	"mox/pkg/driver"
 
-	tlogger "goodin/drivers/monitoring/logger"
-	logExporter "goodin/drivers/monitoring/logger/exporter"
-	ttrace "goodin/drivers/monitoring/trace"
-	traceExporter "goodin/drivers/monitoring/trace/exporter"
-	core "goodin/internal"
+	tlogger "mox/drivers/monitoring/logger"
+	logExporter "mox/drivers/monitoring/logger/exporter"
+	tmetric "mox/drivers/monitoring/metric"
+	metricExporter "mox/drivers/monitoring/metric/exporter"
+	ttrace "mox/drivers/monitoring/trace"
+	traceExporter "mox/drivers/monitoring/trace/exporter"
+	core "mox/internal"
 
 	"go.opentelemetry.io/otel"
-	"go.opentelemetry.io/otel/exporters/stdout/stdoutmetric"
 
 	"go.opentelemetry.io/otel/log/global"
 	"go.opentelemetry.io/otel/propagation"
@@ -66,6 +66,20 @@ func setupOTelSDK(app core.App, ctx context.Context) (shutdown func(context.Cont
 	shutdownFuncs = append(shutdownFuncs, tracerProvider.Shutdown)
 	otel.SetTracerProvider(tracerProvider)
 
+	// Set up meter provider.
+	if app.Config().Monitoring.EnableTelemetry {
+		meterProvider, err := newMeterProvider(app)
+		if err != nil {
+			app.Logger().Error(err.Error())
+			handleErr(err)
+			return nil, err
+		}
+		shutdownFuncs = append(shutdownFuncs, meterProvider.Shutdown)
+		otel.SetMeterProvider(meterProvider)
+	} else {
+		app.Logger().Info("metric collection is disabled")
+	}
+
 	// Set up log provider
 	if app.Config().Monitoring.EnableCollectLog {
 		loggerProvider, err := newLoggerProvider(app)
@@ -114,17 +128,27 @@ func newTraceProvider(app core.App) (*trace.TracerProvider, error) {
 	return tracerProvider, nil
 }
 
-func newMeterProvider() (*metric.MeterProvider, error) {
-	metricExporter, err := stdoutmetric.New()
+func newMeterProvider(app core.App) (*metric.MeterProvider, error) {
+	mExporter, err := metricExporter.NewOTLP(app.Config().Monitoring.OtelEndpoint)
 	if err != nil {
 		return nil, err
 	}
 
-	meterProvider := metric.NewMeterProvider(
-		metric.WithReader(metric.NewPeriodicReader(metricExporter,
-			// Default is 1m. Set to 3s for demonstrative purposes.
-			metric.WithInterval(3*time.Second))),
-	)
+	app.Logger().Info("[METRIC] OTLP Connected")
+
+	cfg := app.Config()
+
+	meterProvider, _, err := tmetric.NewMeterProviderBuilder(
+		cfg.App.Name,
+		strconv.Itoa(cfg.App.Version),
+		cfg.App.Mode,
+	).SetExporter(mExporter).Build()
+	if err != nil {
+		return nil, err
+	}
+
+	app.Logger().Debug("Meter provider initialized")
+
 	return meterProvider, nil
 }
 

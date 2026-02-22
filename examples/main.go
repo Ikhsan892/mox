@@ -1,8 +1,7 @@
 package main
 
 import (
-	service "goodin"
-	core "goodin/internal"
+	service "mox"
 )
 
 func main() {
@@ -10,15 +9,9 @@ func main() {
 		DisableBanner: true,
 	})
 
-	template.App.OnBeforeApplicationBootstrapped().Add("anything", func(e core.BeforeApplicationBootstrapped) error {
-		// you can add event on before application bootstrapped here
-		return nil
-	})
+	ctx := template.App.Context()
 
-	template.App.OnAfterApplicationBootstrapped().Add("anything", func(e core.AfterApplicationBootstrapped) error {
-		// you can add event on before application bootstrapped here
-		return nil
-	})
+	template.ShutdownSignal()
 
 	template.Start()
 
@@ -26,6 +19,18 @@ func main() {
 		template.App.Logger().Warn("Command not found")
 	}
 
-	// Check if application is shutdown
-	template.ShutdownSignal()
+	err := template.RootCmd.ExecuteContext(ctx)
+
+	select {
+	case <-template.App.Context().Done():
+		template.App.Logger().Info("Application killed by user (Interrupt)")
+	default:
+		if err != nil {
+			template.App.Logger().Error("Application finished with error", "err", err)
+		} else {
+			template.App.Logger().Info("Application finished successfully")
+		}
+	}
+
+	template.Shutdown()
 }

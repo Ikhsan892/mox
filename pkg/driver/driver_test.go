@@ -2,7 +2,7 @@ package driver
 
 import (
 	"errors"
-	"goodin/mocks/goodin/pkg/driver"
+	"mox/mocks/goodin/pkg/driver"
 	"testing"
 
 	"github.com/stretchr/testify/assert"

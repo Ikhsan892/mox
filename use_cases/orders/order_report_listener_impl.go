@@ -3,9 +3,9 @@ package orders
 import (
 	"log/slog"
 
-	core "goodin/internal"
-	"goodin/use_cases/orders/dto"
-	"goodin/use_cases/orders/port/input/message/listener"
+	core "mox/internal"
+	"mox/use_cases/orders/dto"
+	"mox/use_cases/orders/port/input/message/listener"
 )
 
 var _ (listener.OrderReportListener) = (*OrderReportListenerImpl)(nil)

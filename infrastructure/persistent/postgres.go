@@ -5,7 +5,7 @@ import (
 	"database/sql"
 	"fmt"
 
-	"goodin/pkg/config"
+	"mox/pkg/config"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/jackc/pgx/v5/stdlib"
 )

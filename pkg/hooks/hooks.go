@@ -2,6 +2,8 @@ package hooks
 
 import (
 	"errors"
+	"fmt"
+	"sort"
 	"sync"
 )
 
@@ -56,9 +58,57 @@ func (h *Hook[Param]) Execute(param Param) error {
 		return ErrHandlerNotRegistered
 	}
 
-	for k, _ := range h.handlers {
+	for k := range h.handlers {
 		if err := h.ExecuteOnly(k, param); err != nil {
 			return err
+		}
+	}
+
+	return nil
+}
+
+func (h *Hook[Param]) orderedLoop(data HandlePair[Param]) []string {
+	keys := make([]string, 0, len(data))
+	for key := range data {
+		keys = append(keys, key)
+	}
+
+	sort.Strings(keys)
+
+	return keys
+}
+
+func (h *Hook[Param]) ExecuteWithExclude(param Param, excludedKeys []string) error {
+	if len(h.handlers) < 1 {
+		return ErrHandlerNotRegistered
+	}
+
+	ex := make(map[string]struct{}, len(excludedKeys))
+	for _, k := range excludedKeys {
+		ex[k] = struct{}{}
+	}
+
+	// Preserve the same iteration order as orderedLoop.
+	keys := h.orderedLoop(h.handlers)
+
+	// Filter keys by exclusion set.
+	filtered := make([]string, 0, len(keys))
+	for _, k := range keys {
+		if _, skip := ex[k]; skip {
+			continue
+		}
+		filtered = append(filtered, k)
+	}
+
+	// Nothing to execute after exclusions — treat as no-op (or return a custom error if you prefer).
+	if len(filtered) == 0 {
+		return nil
+	}
+
+	// Execute remaining handlers in order.
+	for _, k := range filtered {
+		if err := h.ExecuteOnly(k, param); err != nil {
+			return fmt.Errorf("hook %s: %w", k, err)
 		}
 	}
 
@@ -75,5 +125,4 @@ func (h *Hook[Param]) ExecuteOnly(key string, param Param) error {
 	}
 
 	return nil
-
 }

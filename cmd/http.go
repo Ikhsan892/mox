@@ -1,8 +1,8 @@
 package cmd
 
 import (
-	"goodin/drivers/http"
-	core "goodin/internal"
+	"mox/drivers/http"
+	core "mox/internal"
 	"github.com/spf13/cobra"
 )
 

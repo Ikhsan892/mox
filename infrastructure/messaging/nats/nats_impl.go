@@ -5,7 +5,7 @@ import (
 	"log/slog"
 	"time"
 
-	core "goodin/internal"
+	core "mox/internal"
 	"github.com/nats-io/nats.go"
 	"github.com/nats-io/nats.go/jetstream"
 )

@@ -3,7 +3,8 @@ package service_test
 import (
 	"testing"
 
-	service "goodin"
+	service "mox"
+
 	"github.com/stretchr/testify/assert"
 )
 

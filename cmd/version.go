@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"os"
 
-	core "goodin/internal"
+	core "mox/internal"
 	"github.com/spf13/cobra"
 )
 

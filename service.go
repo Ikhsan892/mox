@@ -2,13 +2,14 @@ package service
 
 import (
 	"fmt"
-	"goodin/cmd"
 	"log/slog"
 	"os"
 	"os/signal"
 	"syscall"
 
-	core "goodin/internal"
+	"mox/cmd"
+
+	core "mox/internal"
 
 	"github.com/spf13/cobra"
 )
@@ -38,8 +39,8 @@ func New(config BaseConfig) *Service {
 	l := &Service{
 		App: core.NewBaseApp(),
 		RootCmd: &cobra.Command{
-			Use:   "goodin",
-			Short: "Robust Template for Enterprise Application",
+			Use:   "mox",
+			Short: "Zero Downtime Proxy",
 			FParseErrWhitelist: cobra.FParseErrWhitelist{
 				UnknownFlags: true,
 			},
@@ -54,19 +55,13 @@ func New(config BaseConfig) *Service {
 }
 
 func (t *Service) ShutdownSignal() {
-	done := make(chan struct{}, 1)
 	// listen for interrupt signal to gracefully shutdown the application
 	go func() {
 		sigch := make(chan os.Signal, 1)
 		signal.Notify(sigch, os.Interrupt, syscall.SIGTERM)
 		<-sigch
-
-		t.Shutdown()
-
-		done <- struct{}{}
+		t.App.Stop()
 	}()
-
-	<-done
 }
 
 func (t *Service) Shutdown() {
@@ -94,6 +89,4 @@ func (t *Service) Start() {
 	if !t.TemplateConfig.DisableBanner {
 		fmt.Print(banner)
 	}
-
-	t.RootCmd.Execute()
 }

@@ -3,10 +3,10 @@ package cmd
 import (
 	"os"
 
-	"goodin/drivers/http"
-	nats_messaging "goodin/drivers/messaging/nats"
-	"goodin/drivers/monitoring"
-	core "goodin/internal"
+	"mox/drivers/http"
+	nats_messaging "mox/drivers/messaging/nats"
+	"mox/drivers/monitoring"
+	core "mox/internal"
 	"github.com/spf13/cobra"
 )
 

@@ -1,4 +1,4 @@
-MAIN_PACKAGE_PATH := ./examples 
+MAIN_PACKAGE_PATH := ./examples
 BINARY_NAME := service
 VERSION := ${VERSION}
 DESC := Base Template Service
@@ -60,15 +60,15 @@ audit:
 test:
 	go test -v -race -buildvcs ./...
 
-## test/service: run seperate tests 
+## test/service: run seperate tests
 .PHONY: test/service
-test/service: 
+test/service:
 	go test -v -race service
 
 ## swagger/init : run init swagger
 .PHONY: swagger/init
 swagger/init:
-	swag init -g drivers/http/echo.go 
+	swag init -g drivers/http/echo.go
 
 ## test/cover: run all tests and display coverage
 .PHONY: test/cover
@@ -79,30 +79,31 @@ test/cover:
 
 ## run/http: run the http api
 .PHONY: run/http
-run/http: 
+run/http:
 	go run examples/main.go http
+
 
 
 ## run/message-broker: run the message-broker system
 .PHONY: run/message-broker
-run/message-broker: 
+run/message-broker:
 	go run examples/main.go message-broker
 
 ## run/migration: run the migration
 .PHONY: run/migration
-run/migration: 
+run/migration:
 	go run examples/main.go migration up
 
 
 ## run/seeders: run the seeders
 .PHONY: run/seeders
-run/seeders: 
-	go run examples/main.go seeders 
-	
+run/seeders:
+	go run examples/main.go seeders
+
 
 ## dev: run the  application mode development
 .PHONY: run/dev
-run/dev: 
+run/dev:
 	go run examples/main.go all
 
 ## run/live: run the application with reloading on file changes
@@ -113,6 +114,21 @@ run/live:
 		--build.include_ext "go, tpl, tmpl, html, css, scss, js, ts, sql, jpeg, jpg, gif, png, bmp, svg, webp, ico" \
 		--misc.clean_on_exit "true"
 
+
+## dev: run the  application mode development
+.PHONY: run/master
+run/master:
+	go run examples/main.go master
+
+
+.PHONY: run/worker
+run/worker:
+	go run examples/main.go worker
+
+
+.PHONY: run/master
+force-kill-port:
+	fuser -k 1111/tcp
 
 # ==================================================================================== #
 # OPERATIONS
@@ -129,7 +145,7 @@ push:
 
 ## production/deploy: deploy the application to production
 .PHONY: build
-build: 
+build:
 	@echo "Building the binary..."
 	@go get .
 	@go build -ldflags="-X ${MODULE}/pkg.Version=${VERSION}" \
@@ -162,7 +178,7 @@ production/deploy: confirm tidy audit no-dirty
 
 ## binary/windows: Create binary for windows
 .PHONY: binary/windows
-binary/windows: 
+binary/windows:
 	cd ./ui && \
 	npm run build  && \
 	cd .. && \
@@ -178,4 +194,63 @@ binary/windows/debug:
 	go build -o=${BINARY_NAME} ${MAIN_PACKAGE_PATH} && \
 	mv ./${BINARY_NAME} C:/Users/FATIHUL/Documents/pribadi/testajah/${BINARY_NAME} && \
 	echo 'Done Creating Binary for Windows'
-	
+
+
+
+# Default PID kalau lu lupa masukin argumen
+pid ?= 0
+# Path socket disesuaiin sama pola Mox lu
+socket = /tmp/haproxy_$(pid).sock
+
+.PHONY: info stat sessions drain help
+
+help:
+	@echo "Mox HAProxy CLI Tool"
+	@echo "Usage: make <command> pid=<process_id>"
+	@echo ""
+	@echo "Commands:"
+	@echo "  info     : Liat info general HAProxy (Uptime, Ver, Maxconn)"
+	@echo "  stat     : Liat statistik frontend/backend (Tabel format)"
+	@echo "  sessions : Cek jumlah koneksi aktif saat ini (scur)"
+	@echo "  drain    : Matikan frontend (Graceful stop)"
+
+# Liat info dengan format lebih rapi
+info:
+	@if [ "$(pid)" = "0" ]; then echo "Error: pid=<id> is required"; exit 1; fi
+	@echo "--- HAProxy Info (PID: $(pid)) ---"
+	@echo "show info" | socat - $(socket) | tr ':' ',' | column -t -s ','
+
+# Liat statistik (Hanya kolom penting: Name, Status, Current Sessions, Total Requests)
+stat:
+	@if [ "$(pid)" = "0" ]; then echo "Error: pid=<id> is required"; exit 1; fi
+	@echo "--- HAProxy Statistics ---"
+	@echo "show stat" | socat - $(socket) | cut -d, -f1,2,5,18,34 | column -t -s ','
+
+# Khusus buat mantau sisa orang sebelum di-kill (Draining monitor)
+sessions:
+	@if [ "$(pid)" = "0" ]; then echo "Error: pid=<id> is required"; exit 1; fi
+	@echo "Current Active Sessions: "
+	@echo "show stat" | socat - $(socket) | grep "FRONTEND" | cut -d, -f5
+
+# Command buat simulasi "Nurunin Weight" ke 0 (Disable)
+drain:
+	@if [ "$(pid)" = "0" ]; then echo "Error: pid=<id> is required"; exit 1; fi
+	@echo "Disabling frontend to drain traffic..."
+	@echo "disable frontend gateway" | socat - $(socket)
+	@echo "Done. Use 'make sessions pid=$(pid)' to monitor."
+
+
+# Command buat simulasi "Nurunin Weight" ke 0 (Disable)
+enable:
+	@if [ "$(pid)" = "0" ]; then echo "Error: pid=<id> is required"; exit 1; fi
+	@echo "Enabling frontend to drain traffic..."
+	@echo "enable frontend gateway" | socat - $(socket)
+	@echo "Done. Use 'make sessions pid=$(pid)' to monitor."
+
+# Simulasi weight dengan mengatur maxconn
+# Contoh: make set-weight pid=137742 val=50
+set-weight:
+	@if [ "$(pid)" = "0" ]; then echo "Error: pid=<id> is required"; exit 1; fi
+	@echo "Simulating weight reduction by setting maxconn to $(val)..."
+	@echo "set maxconn frontend gateway $(val)" | socat - $(socket)
+	@echo "Done. Check status with 'make stat pid=$(pid)'"

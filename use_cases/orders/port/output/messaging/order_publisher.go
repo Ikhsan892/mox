@@ -1,6 +1,6 @@
 package messaging
 
-import "goodin/use_cases/orders/dto"
+import "mox/use_cases/orders/dto"
 
 type OrderPublisher interface {
 	PublishOrder(payload *dto.Order) error

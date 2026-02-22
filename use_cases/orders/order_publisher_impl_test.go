@@ -5,9 +5,9 @@ import (
 	"errors"
 	"testing"
 
-	core "goodin/internal"
-	nats_infra "goodin/mocks/goodin/infrastructure/messaging/nats"
-	"goodin/use_cases/orders/dto"
+	core "mox/internal"
+	nats_infra "mox/mocks/goodin/infrastructure/messaging/nats"
+	"mox/use_cases/orders/dto"
 	"github.com/stretchr/testify/assert"
 	"google.golang.org/protobuf/proto"
 )

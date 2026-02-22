@@ -3,7 +3,7 @@ package service
 import (
 	"context"
 
-	"goodin/use_cases/orders/dto"
+	"mox/use_cases/orders/dto"
 )
 
 type OrderService interface {

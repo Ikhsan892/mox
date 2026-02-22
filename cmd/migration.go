@@ -8,8 +8,8 @@ import (
 	"strings"
 
 	migrationinstance "github.com/golang-migrate/migrate/v4"
-	app "goodin/internal"
-	core "goodin/internal"
+	app "mox/internal"
+	core "mox/internal"
 	"github.com/spf13/cobra"
 )
 

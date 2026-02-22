@@ -3,7 +3,7 @@
 package request
 
 import (
-	dto "goodin/use_cases/orders/dto"
+	dto "mox/use_cases/orders/dto"
 
 	mock "github.com/stretchr/testify/mock"
 )

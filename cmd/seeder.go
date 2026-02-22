@@ -3,9 +3,9 @@ package cmd
 import (
 	"github.com/spf13/cobra"
 
-	core "goodin/internal"
+	core "mox/internal"
 
-	"goodin/seeders"
+	"mox/seeders"
 )
 
 func NewSeeder(core core.App) *cobra.Command {

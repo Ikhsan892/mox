@@ -5,10 +5,10 @@ import (
 	"log/slog"
 	"time"
 
-	nats_infra "goodin/infrastructure/messaging/nats"
-	core "goodin/internal"
-	"goodin/use_cases/orders"
-	"goodin/use_cases/orders/dto"
+	nats_infra "mox/infrastructure/messaging/nats"
+	core "mox/internal"
+	"mox/use_cases/orders"
+	"mox/use_cases/orders/dto"
 	"github.com/nats-io/nats.go/jetstream"
 	"google.golang.org/protobuf/proto"
 )

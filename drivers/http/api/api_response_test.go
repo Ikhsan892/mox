@@ -6,7 +6,7 @@ import (
 	"strconv"
 	"testing"
 
-	"goodin/drivers/http/api"
+	"mox/drivers/http/api"
 	"github.com/labstack/echo/v4"
 	"github.com/stretchr/testify/assert"
 )

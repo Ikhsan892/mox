@@ -3,7 +3,7 @@ package nats_messaging
 import (
 	"log/slog"
 
-	"goodin/drivers/messaging/nats/listener"
+	"mox/drivers/messaging/nats/listener"
 )
 
 func registerListener(n *NatsMesssaging) {

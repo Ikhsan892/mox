@@ -6,7 +6,7 @@ import (
 	"time"
 
 	_ "github.com/go-sql-driver/mysql"
-	"goodin/pkg/config"
+	"mox/pkg/config"
 )
 
 type MySQL struct {
