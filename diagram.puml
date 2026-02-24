@@ -103,7 +103,7 @@
                 + Remove(pid int)
                 + Get(pid) int
                 + Total() int
-                + GetAll() []WorkerProcess
+                + GetAll() []WorkerProcess 
             }
 
             class "IPCServerGateway" as Server {

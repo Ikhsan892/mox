@@ -9,6 +9,7 @@ import (
 	"time"
 
 	core "mox/internal"
+	"mox/tools/utils"
 	"mox/use_cases/bus"
 	"mox/use_cases/operation"
 	"mox/use_cases/workerclient"
@@ -81,6 +82,7 @@ func (c *ConnectionRegistry) Total() int64 {
 
 func (c *ConnectionRegistry) Broadcast(payload []byte) {
 	c.bus.Broadcast(c.ctx, operation.MessagePayload{
+		ID: utils.GenerateUUID(),
 		Payload: operation.Command{
 			Type:    operation.Chat,
 			Payload: payload,
@@ -91,6 +93,7 @@ func (c *ConnectionRegistry) Broadcast(payload []byte) {
 
 func (c *ConnectionRegistry) pingWorkers() {
 	if err := c.bus.Broadcast(c.ctx, operation.MessagePayload{
+		ID:      utils.GenerateUUID(),
 		FromPID: -1,
 		Payload: operation.Command{
 			Type: operation.Ping,

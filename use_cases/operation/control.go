@@ -10,6 +10,7 @@ type SystemCore interface {
 	GetTotalWorkers() int64
 	ScaleUp()
 	ScaleDown()
+	Drain(pid int) error
 }
 
 type IControl interface {

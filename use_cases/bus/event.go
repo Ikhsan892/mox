@@ -22,7 +22,7 @@ func NewEventBus(app core.App) *EventBus {
 // Broadcast implements [Messaging].
 func (e *EventBus) Broadcast(ctx context.Context, payload operation.MessagePayload, workers []workerclient.WorkerProcess) error {
 	for _, v := range workers {
-		e.app.Logger().Info(fmt.Sprintf("broadcast to PID: %d, MsgType : ", v.PID(), payload.Payload.Type))
+		e.app.Logger().Info(fmt.Sprintf("broadcast to PID: %d, MsgType : %s", v.PID(), payload.Payload.Type.String()))
 
 		if v.State() == workerclient.Disconnected {
 			e.app.Logger().Info(fmt.Sprintf("PID: %d, msg : still disconnected", v.PID()))

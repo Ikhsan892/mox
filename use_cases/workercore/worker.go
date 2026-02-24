@@ -122,6 +122,8 @@ func (w *Worker) receiveFD() (int, string, error) {
 		return 0, "", fmt.Errorf("paket OOB diterima tapi ARRAY FD KOSONG")
 	}
 
+	fmt.Println(fds, "list fd files")
+
 	fd := fds[0]
 
 	return fd, string(dummy[:n]), nil

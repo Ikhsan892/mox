@@ -27,7 +27,7 @@ type IPCServerGateway struct {
 
 	app          core.App
 	l            net.Listener
-	fd           int // file descriptor
+	fdFile       *os.File // file descriptor
 	unixListener *net.UnixListener
 	mu           *sync.RWMutex
 }
@@ -70,7 +70,7 @@ func (c *IPCServerGateway) ListenAndServe() {
 
 	c.mu.Lock()
 	c.l = l
-	c.fd = int(c.getFD(l).Fd())
+	c.fdFile = c.getFD(l)
 	c.unixListener = unixListener
 	c.mu.Unlock()
 
@@ -85,13 +85,17 @@ func (c *IPCServerGateway) Close() {
 		return
 	}
 
+	if err := c.fdFile.Close(); err != nil {
+		c.app.Logger().Error(err.Error())
+	}
+
 	if err := c.l.Close(); err != nil {
 		c.app.Logger().Error(err.Error())
 	}
 }
 
 func (c *IPCServerGateway) handleHandshake(conn *net.UnixConn) {
-	// conn.SetReadDeadline(time.Now().Add(1 * time.Second))
+	conn.SetReadDeadline(time.Now().Add(1 * time.Second))
 
 	reader := bufio.NewReader(conn)
 	payload, err := reader.ReadString('\n')
@@ -125,17 +129,14 @@ func (c *IPCServerGateway) getFD(l net.Listener) *os.File {
 	}
 
 	// -------------------------------------------------------------------------
-	// [CRITICAL WARNING]
+	// NOTE: [CRITICAL WARNING]
 	// Jangan pernah mengganti implementasi di bawah ini dengan `int(f.Fd())`.
-	//
 	// Memanggil f.Fd() akan memaksa socket keluar dari Go Netpoller dan masuk
 	// ke mode BLOCKING system call.
-	//
 	// Efek fatalnya:
 	// 1. TCP Listener utama (l) akan ikut berubah jadi Blocking.
 	// 2. l.Accept() akan macet total (hang) dan tidak bisa di-interrupt.
 	// 3. l.SetDeadline() tidak akan berfungsi lagi.
-	//
 	// Gunakan SyscallConn().Control() untuk mengintip nilai FD dengan aman
 	// tanpa mengubah mode socket.
 	// referensi: https://morsmachine.dk/netpoller.html
@@ -198,7 +199,7 @@ func (c *IPCServerGateway) processWorker() {
 func (m *IPCServerGateway) writeProceedConnection(conn *net.UnixConn) error {
 	payload := []byte("PROCEED")
 
-	fdInt := int(m.fd)
+	fdInt := int(m.fdFile.Fd())
 
 	rights := syscall.UnixRights(fdInt)
 
@@ -208,7 +209,7 @@ func (m *IPCServerGateway) writeProceedConnection(conn *net.UnixConn) error {
 		return fmt.Errorf("gagal kirim msg unix: %v", err)
 	}
 
-	m.app.Logger().Info(fmt.Sprintf("[IPC-SEND] Success! Payload: %d bytes | OOB (FD): %d bytes | Target: %s", n, oobn, conn.RemoteAddr()))
+	m.app.Logger().Info(fmt.Sprintf("[IPC-SEND] Success! Payload: %d bytes | OOB (FD): %d bytes | Target: %s | FD %d", n, oobn, conn.RemoteAddr(), fdInt))
 
 	return nil
 }

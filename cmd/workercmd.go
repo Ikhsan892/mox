@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"mox/drivers/daemon"
 	"mox/drivers/worker"
 	core "mox/internal"
 
@@ -20,9 +21,9 @@ func NewWorkerCommand(app core.App) *cobra.Command {
 				return err
 			}
 
-			// if err := app.Driver().RunDriver(daemon.NewDaemonAdapter(app)); err != nil {
-			// 	return err
-			// }
+			if err := app.Driver().RunDriver(daemon.NewDaemonAdapter(app)); err != nil {
+				return err
+			}
 
 			<-cmd.Context().Done()
 

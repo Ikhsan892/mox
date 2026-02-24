@@ -9,6 +9,7 @@ import (
 	"time"
 
 	core "mox/internal"
+	"mox/tools/utils"
 	"mox/use_cases/operation"
 )
 
@@ -50,7 +51,7 @@ func NewWorkerClient(
 // Drain implements [WorkerProcess].
 func (w *WorkerClient) Drain() error {
 	_, err := w.Send(w.app.Context(), operation.MessagePayload{
-		ID:      "123",
+		ID:      utils.GenerateUUID(),
 		FromPID: w.PID(),
 		Payload: operation.Command{
 			Type: operation.Drain,
@@ -114,7 +115,7 @@ func (w *WorkerClient) Shutdown() error {
 	// try to shutdown worker if possible
 	go func() {
 		_, err := w.Send(w.app.Context(), operation.MessagePayload{
-			ID:      "123",
+			ID:      utils.GenerateUUID(),
 			FromPID: -1,
 			Payload: operation.Command{
 				Type: operation.Shutdown,
@@ -134,6 +135,7 @@ func (w *WorkerClient) Start() error {
 	w.status = Connected
 
 	_, err := w.Send(w.app.Context(), operation.MessagePayload{
+		ID:      utils.GenerateUUID(),
 		FromPID: w.PID(),
 		Payload: operation.Command{
 			Type: operation.Ping,
